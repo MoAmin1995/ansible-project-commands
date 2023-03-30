@@ -1,0 +1,55 @@
+---
+
+
+- name: deploy jupiter website #name of the playbook
+  hosts: all #where we are going to use to deploy the website
+  become: yes #comand must be retried until it succeeds
+  become_user: root #changing ansible to root user
+
+  tasks: #all the commands that must be run to deploy website
+    - name: update ec2 instance #name/description of the command
+      yum:
+        name: "*"
+        state: latest #version you want to download
+        update_cache: yes 
+
+    - name: install apache server
+      yum:
+        name: httpd #name of service you want to download
+        state: latest
+
+    - name: change directory to the html directory
+      shell: cd /var/www/html
+
+    - name: download web files from github
+      get_url: 
+        url: https://github.com/azeezsalu/jupiter/archive/refs/heads/main.zip #where we download file from
+        dest: /var/www/html/ #where you are going to download to
+
+    - name: unzip the zip folder
+      ansible.builtin.unarchive:
+        src: /var/www/html/jupiter-main.zip #where is the zip folder
+        dest: /var/www/html/ #where to unzip folder to
+        remote_src: yes 
+
+    - name: copy webfiles from the jupiter-main directory to the html directory
+      copy: 
+        src: /var/www/html/jupiter-main/ #what we are copying
+        dest: /var/www/html/ #where we are copying to
+        remote_src: yes
+
+    - name: remove the jupiter-main directory
+      file: 
+        path: /var/www/html/jupiter-main #what we are removing
+        state: absent #when removing must be absent
+
+    - name: remove the jupiter-main.zip folder
+      file: 
+        path: /var/www/html/jupiter-main.zip
+        state: absent 
+
+    - name: start apache server, if not started
+      ansible.builtin.service:
+        enabled: yes
+        name: httpd
+        state: started
